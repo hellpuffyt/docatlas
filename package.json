@@ -1,0 +1,49 @@
+{
+  "name": "docatlas",
+  "version": "0.1.0",
+  "description": "A documentation site engine whose code samples and cross-references cannot go stale: snippets are pulled live from the real source tree at build time, dead links fail the build, and search runs on a real inverted index with BM25 ranking.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "docatlas": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src test",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
+  },
+  "license": "MIT",
+  "author": "Prabesh Sharma",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hellpuffyt/docatlas.git"
+  },
+  "keywords": [
+    "documentation",
+    "docs",
+    "static-site",
+    "search",
+    "inverted-index",
+    "link-checker"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^22.10.1",
+    "@vitest/coverage-v8": "^2.1.5",
+    "eslint": "^9.15.0",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.16.0",
+    "vitest": "^2.1.5"
+  }
+}
