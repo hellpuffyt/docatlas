@@ -46,7 +46,7 @@ docatlas serve <outDir> [--port <port>]
 ```
 
 Serves a directory previously produced by `docatlas build` over plain HTTP,
-for local preview. Defaults to port 4173. Fails immediately if `<outDir>`
+for local preview, on `127.0.0.1` only. Defaults to port 4173. Fails immediately if `<outDir>`
 does not exist, rather than starting a server with nothing to serve.
 
 ## docatlas search

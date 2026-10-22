@@ -37,7 +37,10 @@ them as a **build** problem:
   drift from what the file actually says.
 - **A dead-link build failure.** Every relative link and every same-page or
   cross-page heading anchor is resolved against the real, fully-parsed page
-  graph. Broken by default fails `docatlas build` and `docatlas check`.
+  graph. Broken by default fails `docatlas build` and `docatlas check`, and
+  the links written into the generated HTML are rewritten to the `.html`
+  files that actually exist (a test crawls the built site, including this
+  project's own docs, and fails on any relative link that does not resolve).
 - **A real search index.** Not client-side substring matching — a compile-time
   inverted index (tokenized, lightly stemmed, term → posting list) ranked
   with Okapi BM25, shipped as a static JSON asset and queried by the exact
@@ -46,12 +49,19 @@ them as a **build** problem:
 
 ## Quickstart
 
+docatlas is not published to npm yet; build it from a clone and link the
+`docatlas` command:
+
 ```sh
-npm install -g docatlas
+git clone https://github.com/hellpuffyt/docatlas.git
+cd docatlas
+npm install
+npm run build
+npm link            # puts `docatlas` on your PATH (or run `node dist/cli.js`)
 
 docatlas build docs --source . --out site --title "My Project"
 docatlas serve site
-# → http://localhost:4173
+# -> http://127.0.0.1:4173
 ```
 
 Or validate a docs tree without writing a persistent output directory —
@@ -137,7 +147,7 @@ src/
   site/        HTML rendering, page template (dark/light, nav, search UI), build orchestration
   cli.ts       build / check / serve / search subcommands
 docs/          this project's own documentation, built by itself (see below)
-test/          193 tests mirroring the src/ layout, ~97% statement coverage
+test/          199 tests mirroring the src/ layout, ~97% statement coverage
 ```
 
 ## Development
@@ -147,7 +157,7 @@ npm install
 npm run build       # compile src/ → dist/
 npm run typecheck    # tsc --noEmit
 npm run lint          # eslint, zero warnings
-npm test                # vitest run — 193 tests
+npm test                # vitest run — 199 tests
 npm run coverage      # vitest run --coverage
 ```
 
