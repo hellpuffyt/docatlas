@@ -147,7 +147,7 @@ src/
   site/        HTML rendering, page template (dark/light, nav, search UI), build orchestration
   cli.ts       build / check / serve / search subcommands
 docs/          this project's own documentation, built by itself (see below)
-test/          199 tests mirroring the src/ layout, ~97% statement coverage
+test/          200 tests mirroring the src/ layout, ~97% statement coverage
 ```
 
 ## Development
@@ -157,7 +157,7 @@ npm install
 npm run build       # compile src/ → dist/
 npm run typecheck    # tsc --noEmit
 npm run lint          # eslint, zero warnings
-npm test                # vitest run — 199 tests
+npm test                # vitest run — 200 tests
 npm run coverage      # vitest run --coverage
 ```
 

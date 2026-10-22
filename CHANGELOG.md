@@ -4,6 +4,30 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Links in the generated HTML now point at the generated `.html` files. The
+  checker accepted `./guide/x.md`, but the page was written with that href
+  verbatim, so every cross-page link in a built site was a 404 (including
+  11 in this project's own docs).
+- Links that climb above the docs root are dead links instead of being
+  clamped back to the root.
+- `include=` paths that resolve outside `--source` are refused.
+- `docatlas serve` answers 400 to malformed percent-encoding instead of
+  crashing, and binds `127.0.0.1` only.
+- Quickstart: `docatlas` is not on npm; README and docs now build from a
+  clone.
+- CI workflow token restricted to `contents: read`; non-major dev-dependency
+  audit fixes.
+
+### Added
+
+- `test/site/output-links.test.ts`: crawls the built HTML (a fixture site and
+  this repo's own docs) and fails on any unresolvable relative link.
+- `SECURITY.md`, `.editorconfig`, `docs/PRODUCTION_READINESS.md`.
+
 ## [0.1.0] - 2026-09-02
 
 ### Added
