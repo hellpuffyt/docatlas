@@ -1,17 +1,23 @@
 import type { LinkError, Page } from "../types.js";
 
-function isExternal(href: string): boolean {
+export function isExternal(href: string): boolean {
   return /^([a-z][a-z0-9+.-]*:)\/\//i.test(href) || href.startsWith("mailto:");
 }
 
-/** Resolves a relative doc link against the directory of the linking page. */
-function resolvePath(fromPath: string, href: string): string {
+/**
+ * Resolves a relative doc link against the directory of the linking page.
+ * Returns null when the link climbs above the docs root: such a target is
+ * never part of the generated site, so it cannot be a valid link.
+ */
+function resolvePath(fromPath: string, href: string): string | null {
   const fromDir = fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/")) : "";
   const segments = fromDir ? fromDir.split("/") : [];
   for (const part of href.split("/")) {
     if (part === "" || part === ".") continue;
-    if (part === "..") segments.pop();
-    else segments.push(part);
+    if (part === "..") {
+      if (segments.length === 0) return null;
+      segments.pop();
+    } else segments.push(part);
   }
   return segments.join("/");
 }
@@ -72,18 +78,19 @@ export function checkLinks(pages: readonly Page[]): LinkError[] {
 }
 // docatlas:end:check-links
 
-function splitAnchor(href: string): [string, string | undefined] {
+export function splitAnchor(href: string): [string, string | undefined] {
   const idx = href.indexOf("#");
   if (idx === -1) return [href, undefined];
   return [href.slice(0, idx), href.slice(idx + 1)];
 }
 
-function resolveTargetPath(
+export function resolveTargetPath(
   fromPath: string,
   pathPart: string,
-  byPath: Map<string, Page>,
+  byPath: ReadonlyMap<string, Page>,
 ): Page | undefined {
   const resolved = resolvePath(fromPath, pathPart);
+  if (resolved === null) return undefined;
   const candidates = [resolved, `${resolved}.md`, resolved.replace(/\.html?$/, ".md")];
   for (const candidate of candidates) {
     const page = byPath.get(candidate);

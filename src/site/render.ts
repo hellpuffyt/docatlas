@@ -9,7 +9,12 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function renderInline(nodes: readonly InlineNode[]): string {
+/** Maps a source-level href (e.g. `./guide/x.md#y`) to the href written into the HTML. */
+export type HrefRewriter = (href: string) => string;
+
+const identity: HrefRewriter = (href) => href;
+
+function renderInline(nodes: readonly InlineNode[], rewrite: HrefRewriter): string {
   return nodes
     .map((node) => {
       switch (node.type) {
@@ -18,17 +23,17 @@ function renderInline(nodes: readonly InlineNode[]): string {
         case "code":
           return `<code>${escapeHtml(node.value)}</code>`;
         case "strong":
-          return `<strong>${renderInline(node.children)}</strong>`;
+          return `<strong>${renderInline(node.children, rewrite)}</strong>`;
         case "em":
-          return `<em>${renderInline(node.children)}</em>`;
+          return `<em>${renderInline(node.children, rewrite)}</em>`;
         case "link":
-          return `<a href="${escapeHtml(node.href)}">${renderInline(node.children)}</a>`;
+          return `<a href="${escapeHtml(rewrite(node.href))}">${renderInline(node.children, rewrite)}</a>`;
       }
     })
     .join("");
 }
 
-export function renderBlocks(blocks: readonly Block[]): string {
+export function renderBlocks(blocks: readonly Block[], rewrite: HrefRewriter = identity): string {
   const out: string[] = [];
   for (const block of blocks) {
     switch (block.type) {
@@ -38,17 +43,17 @@ export function renderBlocks(blocks: readonly Block[]): string {
         );
         break;
       case "paragraph":
-        out.push(`<p>${renderInline(block.children)}</p>`);
+        out.push(`<p>${renderInline(block.children, rewrite)}</p>`);
         break;
       case "blockquote":
-        out.push(`<blockquote>${renderInline(block.children)}</blockquote>`);
+        out.push(`<blockquote>${renderInline(block.children, rewrite)}</blockquote>`);
         break;
       case "hr":
         out.push("<hr>");
         break;
       case "list": {
         const tag = block.ordered ? "ol" : "ul";
-        const items = block.items.map((it) => `<li>${renderInline(it)}</li>`).join("");
+        const items = block.items.map((it) => `<li>${renderInline(it, rewrite)}</li>`).join("");
         out.push(`<${tag}>${items}</${tag}>`);
         break;
       }

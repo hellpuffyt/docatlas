@@ -61,7 +61,16 @@ export function createStaticHandler(
 ): (req: IncomingMessage, res: ServerResponse) => void {
   const root = path.resolve(outDir);
   return (req, res) => {
-    const urlPath = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
+    let urlPath: string;
+    try {
+      urlPath = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
+    } catch {
+      // Malformed percent-encoding (e.g. "/%E0") used to throw out of the
+      // handler and crash the whole preview server.
+      res.writeHead(400, { "content-type": "text/plain" });
+      res.end("bad request");
+      return;
+    }
     let filePath = path.resolve(root, "." + (urlPath === "/" ? "/index.html" : urlPath));
 
     if (filePath !== root && !filePath.startsWith(root + path.sep)) {
@@ -186,8 +195,9 @@ export function run(argv: string[]): number {
     }
 
     const server = createServer(createStaticHandler(outDir));
-    server.listen(port, () => {
-      console.log(`docatlas serve: http://localhost:${port}`);
+    // Loopback only: this is a local preview server, not a production host.
+    server.listen(port, "127.0.0.1", () => {
+      console.log(`docatlas serve: http://127.0.0.1:${port}`);
     });
     return 0;
   }
