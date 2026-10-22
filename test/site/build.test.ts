@@ -164,4 +164,13 @@ describe("buildSite", () => {
     expect(result.linkErrors).toEqual([]);
     expect(result.snippetErrors).toEqual([]);
   });
+
+  it("refuses includes that resolve outside --source", () => {
+    write(root, "secret.txt", "TOP SECRET\n");
+    write(docsDir, "index.md", "# Home\n\n```txt include=\"../secret.txt\"\n```\n");
+    const result = buildSite({ docsDir, sourceDir, outDir });
+    expect(result.snippetErrors).toHaveLength(1);
+    expect(result.snippetErrors[0]?.reason).toContain("not found");
+    expect(readFileSync(join(outDir, "index.html"), "utf8")).not.toContain("TOP SECRET");
+  });
 });

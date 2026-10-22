@@ -105,9 +105,16 @@ export function buildSite(options: BuildOptions): BuildResult {
   const siteTitle = options.siteTitle ?? "Documentation";
 
   const sourceCache = new Map<string, string | undefined>();
+  const sourceRoot = path.resolve(sourceDir);
   const readSource = (relPath: string): string | undefined => {
     if (sourceCache.has(relPath)) return sourceCache.get(relPath);
-    const full = path.join(sourceDir, relPath);
+    const full = path.resolve(sourceRoot, relPath);
+    // An include may only read inside --source: `include="../../secret"` must
+    // not copy files from elsewhere on disk into the published site.
+    if (!full.startsWith(sourceRoot + path.sep)) {
+      sourceCache.set(relPath, undefined);
+      return undefined;
+    }
     const value = fs.existsSync(full) && fs.statSync(full).isFile()
       ? fs.readFileSync(full, "utf8")
       : undefined;
