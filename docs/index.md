@@ -26,10 +26,19 @@ Three things make that true:
 
 ## Quickstart
 
+docatlas is not published to npm yet; build it from a clone and link the
+`docatlas` command:
+
 ```sh
-npm install -g docatlas
+git clone https://github.com/hellpuffyt/docatlas.git
+cd docatlas
+npm install
+npm run build
+npm link            # puts `docatlas` on your PATH (or run `node dist/cli.js`)
+
 docatlas build docs --source . --out site --title "My Project"
 docatlas serve site
+# -> http://127.0.0.1:4173
 ```
 
 ## This site

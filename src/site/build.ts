@@ -4,9 +4,9 @@ import * as path from "node:path";
 import { parseMarkdown } from "../markdown/parser.js";
 import { collectLinks } from "../markdown/inline.js";
 import { resolveSnippets } from "../snippets/resolver.js";
-import { checkLinks } from "../links/checker.js";
+import { checkLinks, isExternal, resolveTargetPath, splitAnchor } from "../links/checker.js";
 import { buildIndex } from "../search/index.js";
-import { blocksToPlainText, renderBlocks } from "./render.js";
+import { blocksToPlainText, renderBlocks, type HrefRewriter } from "./render.js";
 import { renderPage, renderStyle } from "./template.js";
 import type { Block, BuildResult, Page, PageLink, SnippetError } from "../types.js";
 
@@ -48,6 +48,25 @@ function rootPrefixFor(htmlPath: string): string {
   return "../".repeat(depth);
 }
 
+/**
+ * Rewrites a page's source-level links to the URLs that exist in the built
+ * site: `guide/x.md#a` (or `guide/x`, `guide/x.html`) on `index.md` becomes
+ * `guide/x.html#a`, written relative to the linking page's own HTML file.
+ * External links, same-page anchors and unresolvable links (only possible
+ * with --allow-broken-links) are left exactly as written.
+ */
+export function hrefRewriterFor(page: Page, byPath: ReadonlyMap<string, Page>): HrefRewriter {
+  const fromDir = path.posix.dirname(toHtmlPath(page.sourcePath));
+  return (href) => {
+    if (href === "" || isExternal(href) || href.startsWith("#")) return href;
+    const [pathPart, anchor] = splitAnchor(href);
+    const target = resolveTargetPath(page.sourcePath, pathPart, byPath);
+    if (!target) return href;
+    const rel = path.posix.relative(fromDir, toHtmlPath(target.sourcePath));
+    return anchor === undefined ? rel : `${rel}#${anchor}`;
+  };
+}
+
 function titleFromPath(sourcePath: string): string {
   const base = sourcePath.split("/").pop() ?? sourcePath;
   const stem = base.replace(/\.md$/, "");
@@ -86,9 +105,16 @@ export function buildSite(options: BuildOptions): BuildResult {
   const siteTitle = options.siteTitle ?? "Documentation";
 
   const sourceCache = new Map<string, string | undefined>();
+  const sourceRoot = path.resolve(sourceDir);
   const readSource = (relPath: string): string | undefined => {
     if (sourceCache.has(relPath)) return sourceCache.get(relPath);
-    const full = path.join(sourceDir, relPath);
+    const full = path.resolve(sourceRoot, relPath);
+    // An include may only read inside --source: `include="../../secret"` must
+    // not copy files from elsewhere on disk into the published site.
+    if (!full.startsWith(sourceRoot + path.sep)) {
+      sourceCache.set(relPath, undefined);
+      return undefined;
+    }
     const value = fs.existsSync(full) && fs.statSync(full).isFile()
       ? fs.readFileSync(full, "utf8")
       : undefined;
@@ -129,13 +155,14 @@ export function buildSite(options: BuildOptions): BuildResult {
   fs.mkdirSync(path.join(outDir, "assets"), { recursive: true });
 
   const nav = pages.map((p) => ({ href: toHtmlPath(p.sourcePath), title: p.title }));
+  const byPath = new Map(pages.map((p) => [p.sourcePath, p]));
 
   for (const page of pages) {
     const htmlPath = toHtmlPath(page.sourcePath);
     const html = renderPage({
       siteTitle,
       title: page.title,
-      bodyHtml: renderBlocks(page.blocks),
+      bodyHtml: renderBlocks(page.blocks, hrefRewriterFor(page, byPath)),
       nav,
       currentHref: htmlPath,
       rootPrefix: rootPrefixFor(htmlPath),

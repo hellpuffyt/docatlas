@@ -210,4 +210,14 @@ describe("createStaticHandler", () => {
     const { status } = await done;
     expect(status).toBe(403);
   });
+
+  it("answers 400 (instead of crashing) for malformed percent-encoding", async () => {
+    writeFileSync(join(docsDir, "index.md"), "# Home\n");
+    withCapturedConsole(() => run(["build", docsDir, "--out", outDir]));
+    const handler = createStaticHandler(outDir);
+    const { req, res, done } = fakeReqRes("/%E0%A4%A");
+    handler(req, res);
+    const { status } = await done;
+    expect(status).toBe(400);
+  });
 });

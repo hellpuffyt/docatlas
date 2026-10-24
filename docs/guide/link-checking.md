@@ -14,8 +14,13 @@ a broken one fails the build.
 - **Relative page links** — `./guide.md`, `../index.md`, and so on — are
   resolved against the linking page's own directory, exactly like a
   filesystem path, and matched against every page docatlas actually parsed.
-  A link to `guide.html` resolves back to `guide.md` too, since that's what
-  the generated site serves.
+  A link to `guide.html` (or extensionless `guide`) resolves back to
+  `guide.md` too, since that's what the generated site serves. A link that
+  climbs above the docs root (`../` from a top-level page) is always an
+  error: nothing outside the docs tree is part of the generated site.
+- **The written HTML** — every resolved link is rewritten to the `.html`
+  file the build actually writes, relative to the linking page, so a link
+  that passed the check also works in the generated site.
 - **Same-page anchors** — `#some-heading` — are checked against the heading
   slugs docatlas generated for that page.
 - **Cross-page anchors** — `other-page.md#some-heading` — are checked
