@@ -12,14 +12,23 @@ This documentation site is itself built with docatlas, and CI fails the
 build if it ever drifts from that claim. See
 [`docs/guide/dogfooding.md`](./docs/guide/dogfooding.md).
 
-<p align="center">
-  <img src="./assets/screenshots/light.png" width="49%" alt="docatlas light theme" />
-  <img src="./assets/screenshots/dark.png" width="49%" alt="docatlas dark theme" />
-</p>
+[Case study ↗](https://hellpuff.dev/work/docatlas)
 
-<p align="center">
-  <img src="./assets/screenshots/search.png" width="70%" alt="docatlas's BM25-ranked search box, live" />
-</p>
+<img src="docs/assets/live-include-dark.webp" width="100%" alt="docatlas Live Includes page in dark theme, with a code block injected at build time from src/snippets/extractor.ts">
+
+*Real screenshot: docatlas's own docs, built by docatlas, open on the Live
+Includes guide in dark theme. The green "live: src/snippets/extractor.ts"
+block is injected from the source file at build time.*
+
+<img src="docs/assets/bm25-search.webp" width="100%" alt="docatlas search dropdown with BM25-ranked results and scores for the query 'dead link anchor'">
+
+*Real screenshot: the built-in search box returning BM25-ranked pages, with
+scores, for the query "dead link anchor".*
+
+## Status
+
+Version 0.1.0, not published to npm. Typecheck, lint, 201 tests and a
+dogfood build of this repository's own `docs/` run in CI on every push.
 
 ## Why
 
@@ -47,6 +56,13 @@ them as a **build** problem:
   same ranking module both in the browser and from `docatlas search` on the
   command line.
 
+## Requirements
+
+- Node.js and npm. CI tests Node 20 (Linux, Windows, macOS) and Node 22
+  (Linux). `package.json` declares `engines: >=18`, but Node 18 is not tested,
+  and the dev toolchain (vitest 4) needs Node 20 or newer.
+- No runtime dependencies, network access or services.
+
 ## Quickstart
 
 docatlas is not published to npm yet; build it from a clone and link the
@@ -60,8 +76,9 @@ npm run build
 npm link            # puts `docatlas` on your PATH (or run `node dist/cli.js`)
 
 docatlas build docs --source . --out site --title "My Project"
+# built 8 page(s) -> site
 docatlas serve site
-# -> http://127.0.0.1:4173
+# docatlas serve: http://127.0.0.1:4173
 ```
 
 Or validate a docs tree without writing a persistent output directory —
@@ -69,7 +86,20 @@ the form CI should use:
 
 ```sh
 docatlas check docs --source .
+# docatlas check passed: 8 page(s), 0 issues
 ```
+
+Query the compiled index from the terminal:
+
+```sh
+docatlas search site/assets/search-index.json bm25
+# 0.558  Search  (guide/search.html)
+# 0.557  Dogfooding docatlas  (guide/dogfooding.html)
+# ...
+```
+
+(The page counts and scores above are from building this repository's own
+`docs/`; yours will differ.)
 
 ## A live include, for real
 
@@ -132,7 +162,8 @@ with docatlas, naturally).
 | `docatlas build <docsDir> --source <dir> --out <dir>` | Full build: parse, resolve includes, check links, write HTML + search index. Fails on any error unless `--allow-broken-links`. |
 | `docatlas check <docsDir> --source <dir>` | Same validation as `build`, no persistent output directory — the form CI uses. |
 | `docatlas serve <outDir> [--port <n>]` | Serves a built site over plain HTTP for local preview. |
-| `docatlas search <indexJsonPath> <query>` | Ranked BM25 hits from the command line, no browser needed. |
+| `docatlas search <indexJsonPath> <query> [--top <n>]` | Ranked BM25 hits from the command line (default top 10), no browser needed. |
+| `docatlas --version` / `--help` | Print the version or usage. |
 
 Full flag reference: [`docs/reference/cli.md`](./docs/reference/cli.md).
 
@@ -147,7 +178,7 @@ src/
   site/        HTML rendering, page template (dark/light, nav, search UI), build orchestration
   cli.ts       build / check / serve / search subcommands
 docs/          this project's own documentation, built by itself (see below)
-test/          200 tests mirroring the src/ layout, ~97% statement coverage
+test/          201 tests mirroring the src/ layout, ~97% statement coverage
 ```
 
 ## Development
@@ -157,13 +188,30 @@ npm install
 npm run build       # compile src/ → dist/
 npm run typecheck    # tsc --noEmit
 npm run lint          # eslint, zero warnings
-npm test                # vitest run — 200 tests
+npm test                # vitest run — 201 tests
 npm run coverage      # vitest run --coverage
 ```
 
 CI runs all of the above on Linux, Windows and macOS, plus a dogfood job
 that builds and checks this project's own `docs/` with the `docatlas`
 binary it just compiled. See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+## Limitations
+
+- Not on npm yet; build from a clone (see Quickstart).
+- `docatlas serve` is a local preview server bound to `127.0.0.1`. Publish
+  the built static files with a real web server.
+- The page template has a single breakpoint: below 48rem the sidebar stacks
+  above the content as a wrapped link list. There is no collapsible menu.
+- `--top` for `search` works but is not listed in `docatlas --help` (it is in
+  the [CLI reference](./docs/reference/cli.md)).
+- The markdown parser is hand-written for documentation prose, not a full
+  CommonMark implementation.
+
+## Security
+
+See [`SECURITY.md`](./SECURITY.md) for scope and how to report a
+vulnerability privately.
 
 ## License
 
