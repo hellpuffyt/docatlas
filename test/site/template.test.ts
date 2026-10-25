@@ -92,4 +92,15 @@ describe("renderStyle", () => {
     expect(css).toContain(".search-results");
     expect(css).toContain(".live-badge");
   });
+
+  it("stacks the sidebar above the content on narrow viewports", () => {
+    const css = renderStyle();
+    const narrow = css.slice(css.indexOf("@media (max-width: 48rem)"));
+    expect(narrow).toContain("@media (max-width: 48rem)");
+    expect(narrow).toMatch(/\.body-row \{ flex-direction: column; \}/);
+    expect(narrow).toMatch(/\.sidebar \{ width: auto;/);
+    // flex children default to min-width:auto, which lets a wide code block
+    // push the page wider than the viewport
+    expect(css).toContain(".content { min-width: 0; }");
+  });
 });

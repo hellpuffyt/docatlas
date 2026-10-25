@@ -204,5 +204,15 @@ code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monosp
 p code { background: var(--code-bg); padding: 0.1rem 0.3rem; border-radius: 0.25rem; }
 blockquote { margin: 1rem 0; padding: 0.25rem 1rem; border-left: 3px solid var(--border); color: var(--fg-muted); }
 .index-list { padding-left: 1.2rem; }
+.content { min-width: 0; }
+@media (max-width: 48rem) {
+  .topbar { flex-wrap: wrap; gap: 0.5rem 0.75rem; padding: 0.6rem 1rem; }
+  .search-box { order: 3; flex-basis: 100%; max-width: none; }
+  .body-row { flex-direction: column; }
+  .sidebar { width: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 0.5rem 1rem; }
+  .sidebar ul { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  .sidebar li { margin-bottom: 0; }
+  .content { padding: 1rem; max-width: none; }
+}
 `;
 }
