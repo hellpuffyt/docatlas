@@ -1,51 +1,60 @@
 # docatlas
 
-**A documentation site engine whose cross-references cannot go stale.**
+A static documentation site generator for markdown docs that live next to
+code. Code blocks can include a file, a marked region or a line range from
+the source tree at build time. Every relative link and heading anchor is
+checked against the parsed pages, and a broken one fails the build. Search
+uses a BM25-ranked inverted index that is built at compile time and shipped
+as JSON.
 
-Code samples are pulled live from the real source tree at build time — not
-hand-copied and quietly forgotten. Every internal link and heading anchor is
-resolved against the real page graph, and a dead one fails the build. Search
-is a real inverted index, BM25-ranked, built at compile time — not
-`.includes()` over page text.
-
-This documentation site is itself built with docatlas, and CI fails the
-build if it ever drifts from that claim. See
+This repository's own `docs/` is built with docatlas, and CI fails if that
+build or its link check fails. See
 [`docs/guide/dogfooding.md`](./docs/guide/dogfooding.md).
 
-<p align="center">
-  <img src="./assets/screenshots/light.png" width="49%" alt="docatlas light theme" />
-  <img src="./assets/screenshots/dark.png" width="49%" alt="docatlas dark theme" />
-</p>
+[Case study ↗](https://hellpuff.dev/work/docatlas)
 
-<p align="center">
-  <img src="./assets/screenshots/search.png" width="70%" alt="docatlas's BM25-ranked search box, live" />
-</p>
+<img src="docs/assets/live-include-dark.webp" width="100%" alt="docatlas Live Includes page in dark theme, with a code block injected at build time from src/snippets/extractor.ts">
 
-## Why
+*Real screenshot: docatlas's own docs, built by docatlas, open on the Live
+Includes guide in dark theme. The green "live: src/snippets/extractor.ts"
+block is injected from the source file at build time.*
 
-Every documentation site eventually accumulates code samples that were
-correct the day they were pasted in and have quietly diverged from the
-codebase ever since — and links that pointed somewhere real until a page got
-renamed. Most tooling treats both as a proofreading problem. docatlas treats
-them as a **build** problem:
+<img src="docs/assets/bm25-search.webp" width="100%" alt="docatlas search dropdown with BM25-ranked results and scores for the query 'dead link anchor'">
 
-- **Live includes.** A fenced code block can `include="file.ts"`,
-  `include="file.ts#region-name"` (a `docatlas:start:NAME` /
-  `docatlas:end:NAME` marker pair, matched regardless of comment syntax), or
-  `include="file.ts:12-30"` (a line range). The markdown source is empty —
-  the content is injected from the real file at build time, so it cannot
-  drift from what the file actually says.
-- **A dead-link build failure.** Every relative link and every same-page or
-  cross-page heading anchor is resolved against the real, fully-parsed page
-  graph. Broken by default fails `docatlas build` and `docatlas check`, and
-  the links written into the generated HTML are rewritten to the `.html`
-  files that actually exist (a test crawls the built site, including this
-  project's own docs, and fails on any relative link that does not resolve).
-- **A real search index.** Not client-side substring matching — a compile-time
-  inverted index (tokenized, lightly stemmed, term → posting list) ranked
-  with Okapi BM25, shipped as a static JSON asset and queried by the exact
-  same ranking module both in the browser and from `docatlas search` on the
-  command line.
+*Real screenshot: the built-in search box returning BM25-ranked pages, with
+scores, for the query "dead link anchor".*
+
+## Status
+
+Version 0.1.0, not published to npm. Typecheck, lint, 201 tests and a
+dogfood build of this repository's own `docs/` run in CI on every push.
+
+## What it checks
+
+Code samples pasted into docs drift from the code, and links break when a
+page is renamed. docatlas makes both build errors:
+
+- **Live includes.** A fenced code block with an empty body can use
+  `include="file.ts"` (the whole file), `include="file.ts#region-name"` (the
+  lines between a `docatlas:start:NAME` and `docatlas:end:NAME` marker, in any
+  comment syntax) or `include="file.ts:12-30"` (a line range). The content is
+  read from the file at build time. A missing file or region fails the build,
+  and so does an include path outside `--source`.
+- **Dead links and anchors.** Every relative link and every same-page or
+  cross-page heading anchor is resolved against the parsed page graph.
+  `docatlas build` and `docatlas check` fail on a broken one. Links in the
+  generated HTML are rewritten to the `.html` files that exist, and a test
+  crawls the built site (including this project's docs) for unresolved links.
+- **Search.** The build writes an inverted index (tokenized, lightly stemmed,
+  term to posting list) as a static JSON file. The same BM25 ranking module
+  answers queries in the browser and from `docatlas search`.
+
+## Requirements
+
+- Node.js and npm. CI tests Node 20 (Linux, Windows, macOS) and Node 22
+  (Linux). `package.json` declares `engines: >=18`, but Node 18 is not tested,
+  and the dev toolchain (vitest 4) needs Node 20 or newer.
+- No runtime dependencies, network access or services.
 
 ## Quickstart
 
@@ -60,26 +69,39 @@ npm run build
 npm link            # puts `docatlas` on your PATH (or run `node dist/cli.js`)
 
 docatlas build docs --source . --out site --title "My Project"
+# built 8 page(s) -> site
 docatlas serve site
-# -> http://127.0.0.1:4173
+# docatlas serve: http://127.0.0.1:4173
 ```
 
-Or validate a docs tree without writing a persistent output directory —
-the form CI should use:
+To validate a docs tree without keeping an output directory (the form to use
+in CI):
 
 ```sh
 docatlas check docs --source .
+# docatlas check passed: 8 page(s), 0 issues
 ```
 
-## A live include, for real
+Query the compiled index from the terminal:
 
-This is not a mockup — the block below is generated by docatlas from
-[`src/snippets/extractor.ts`](./src/snippets/extractor.ts) at build time,
-using `include="src/snippets/extractor.ts#extract-region"` in
-[`docs/guide/live-includes.md`](./docs/guide/live-includes.md). If this
-function's signature ever changes, this README's copy (kept in sync by hand,
-since GitHub doesn't run docatlas over its own markdown) and the generated
-docs page both need updating — but the generated docs page updates itself:
+```sh
+docatlas search site/assets/search-index.json bm25
+# 0.558  Search  (guide/search.html)
+# 0.557  Dogfooding docatlas  (guide/dogfooding.html)
+# ...
+```
+
+(The page counts and scores above are from building this repository's own
+`docs/`; yours will differ.)
+
+## Example: a live include
+
+[`docs/guide/live-includes.md`](./docs/guide/live-includes.md) contains an
+empty code block with `include="src/snippets/extractor.ts#extract-region"`.
+docatlas fills it from
+[`src/snippets/extractor.ts`](./src/snippets/extractor.ts) on every build.
+GitHub does not run docatlas over this README, so the copy below is
+maintained by hand. The generated docs page updates itself.
 
 ```ts
 export function extractRegion(fileContent: string, regionName: string): string {
@@ -122,17 +144,17 @@ resolveSnippets ──► live "include=" fences resolved against --source,
       └──► renderBlocks + renderPage ──► static HTML per page
 ```
 
-Full module map in [`docs/architecture.md`](./docs/architecture.md) (built
-with docatlas, naturally).
+The full module map is in [`docs/architecture.md`](./docs/architecture.md).
 
 ## CLI
 
 | Command | What it does |
 |---|---|
 | `docatlas build <docsDir> --source <dir> --out <dir>` | Full build: parse, resolve includes, check links, write HTML + search index. Fails on any error unless `--allow-broken-links`. |
-| `docatlas check <docsDir> --source <dir>` | Same validation as `build`, no persistent output directory — the form CI uses. |
+| `docatlas check <docsDir> --source <dir>` | Same validation as `build` without a persistent output directory. Use this in CI. |
 | `docatlas serve <outDir> [--port <n>]` | Serves a built site over plain HTTP for local preview. |
-| `docatlas search <indexJsonPath> <query>` | Ranked BM25 hits from the command line, no browser needed. |
+| `docatlas search <indexJsonPath> <query> [--top <n>]` | Ranked BM25 hits from the command line (default top 10), no browser needed. |
+| `docatlas --version` / `--help` | Print the version or usage. |
 
 Full flag reference: [`docs/reference/cli.md`](./docs/reference/cli.md).
 
@@ -146,8 +168,8 @@ src/
   search/      shared tokenizer + stemmer, inverted index, BM25 ranking
   site/        HTML rendering, page template (dark/light, nav, search UI), build orchestration
   cli.ts       build / check / serve / search subcommands
-docs/          this project's own documentation, built by itself (see below)
-test/          200 tests mirroring the src/ layout, ~97% statement coverage
+docs/          this project's own documentation, built by docatlas
+test/          201 tests mirroring the src/ layout, ~97% statement coverage
 ```
 
 ## Development
@@ -157,13 +179,30 @@ npm install
 npm run build       # compile src/ → dist/
 npm run typecheck    # tsc --noEmit
 npm run lint          # eslint, zero warnings
-npm test                # vitest run — 200 tests
+npm test                # vitest run (201 tests)
 npm run coverage      # vitest run --coverage
 ```
 
 CI runs all of the above on Linux, Windows and macOS, plus a dogfood job
 that builds and checks this project's own `docs/` with the `docatlas`
 binary it just compiled. See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+## Limitations
+
+- Not on npm yet; build from a clone (see Quickstart).
+- `docatlas serve` is a local preview server bound to `127.0.0.1`. Publish
+  the built static files with a real web server.
+- The page template has a single breakpoint: below 48rem the sidebar stacks
+  above the content as a wrapped link list. There is no collapsible menu.
+- `--top` for `search` works but is not listed in `docatlas --help` (it is in
+  the [CLI reference](./docs/reference/cli.md)).
+- The markdown parser is hand-written for documentation prose, not a full
+  CommonMark implementation.
+
+## Security
+
+See [`SECURITY.md`](./SECURITY.md) for scope and how to report a
+vulnerability privately.
 
 ## License
 
